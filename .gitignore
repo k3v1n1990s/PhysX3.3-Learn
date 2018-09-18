@@ -1,0 +1,11 @@
+.gitattributes
+*.exe
+*.sdf
+*.VC
+*.VC.*
+/Debug
+/x64
+/.vs
+/util
+/PhysX-3.3-mini
+tags

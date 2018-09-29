@@ -7,6 +7,7 @@
 #include "scene_simulate_event_callback.h"
 #include "scene_simulate_filter_callback.h"
 #include "scene_xml.h"
+#include "convex_mesh.h"
 #include <stdio.h>
 #include <iostream>
 
@@ -20,6 +21,7 @@
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win64/PhysX3ExtensionsDEBUG.lib")
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win64/PhysX3CommonDEBUG_x64.lib")
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win64/PhysX3CharacterKinematicDEBUG_x64.lib")
+		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win64/PhysX3CookingDEBUG_x64.lib")
 		#ifdef PHYSX_ENABLE_PVD
 			#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win64/PhysXVisualDebuggerSDKDEBUG.lib")
 		#endif
@@ -28,6 +30,7 @@
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win64/PhysX3Extensions.lib")
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win64/PhysX3Common_x64.lib")
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win64/PhysX3CharacterKinematic_x64.lib")
+		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win64/PhysX3Cooking_x64.lib")
 	#endif
 #elif defined(_WIN32)
 	#ifdef _DEBUG
@@ -37,6 +40,7 @@
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win32/PhysX3ExtensionsDEBUG.lib")
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win32/PhysX3CommonDEBUG_x86.lib")
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win32/PhysX3CharacterKinematicDEBUG_x86.lib")
+		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win32/PhysX3CookingDEBUG_x86.lib")
 		#ifdef PHYSX_ENABLE_PVD
 			#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win32/PhysXVisualDebuggerSDKDEBUG.lib")
 		#endif
@@ -45,6 +49,7 @@
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win32/PhysX3Extensions.lib")
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win32/PhysX3Common_x86.lib")
 		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win32/PhysX3CharacterKinematic_x86.lib")
+		#pragma comment(lib, LIBRARY_BASIC_PATH"PhysX-3.3-mini/Lib/vc14win32/PhysX3Cooking_x86.lib)
 	#endif
 #else
 	#ifdef	_DEBUG
@@ -54,6 +59,7 @@
 
 static physx::PxDefaultAllocator gDefaultAllocatorCallback;
 static physx::PxDefaultErrorCallback gDefaultErrorCallback;
+static physx::PxCooking* gCooking;
 static SceneSimulateEventCallback gSimulateEventCallback;
 static SceneXML gSceneXML;
 //static SceneSimulateFilterCallback gSimulateFilterCallback;
@@ -129,6 +135,7 @@ int main(int argc, char** argv) {
 	assertTRUE(PxCreateFoundation(PX_PHYSICS_VERSION, gDefaultAllocatorCallback, gDefaultErrorCallback));
 	assertTRUE(PxCreatePhysics(PX_PHYSICS_VERSION, PxGetFoundation(), physx::PxTolerancesScale()));
 	assertTRUE(PxInitExtensions(PxGetPhysics()));
+	assertTRUE(gCooking = PxCreateCooking(PX_PHYSICS_VERSION, PxGetFoundation(), physx::PxCookingParams(PxGetPhysics().getTolerancesScale())));
 #ifdef PHYSX_ENABLE_PVD
 	if (!PxGetPhysics().getPvdConnectionManager()) {
 		fputs("PVD connect manager isn't exist\n", stderr);
@@ -164,7 +171,51 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	gSceneXML.loadscene(scene, material);
-	//////////////////////////////////
+	/*
+	const physx::PxVec3 convex_verts[] = {
+		physx::PxVec3(10,2,0),
+		physx::PxVec3(-10,2,0),
+		physx::PxVec3(0,2,10),
+		physx::PxVec3(0,2,-10),
+	};
+	physx::PxConvexMeshDesc convex_desc;
+	convex_desc.points.count = sizeof(convex_verts) / sizeof(convex_verts[0]);
+	convex_desc.points.stride = sizeof(convex_verts[0]);
+	convex_desc.points.data = convex_verts;
+	convex_desc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
+	physx::PxDefaultMemoryOutputStream outbuf;
+	assertTRUE(gCooking->cookConvexMesh(convex_desc, outbuf));
+	physx::PxDefaultMemoryInputData inputdata(outbuf.getData(), outbuf.getSize());
+	physx::PxConvexMesh* convex_mesh;
+	assertTRUE(convex_mesh = PxGetPhysics().createConvexMesh(inputdata));
+
+	float euler_angle[3] = {
+		0.0f,
+		0.0f,
+		mathDegToRad(180.0)
+	};
+	float quat[4];
+	mathEulerAnglesToQuaternion(euler_angle, quat);
+	physx::PxTransform convex_transform(physx::PxVec3(-10.0f, 0.0f, 0.0f), physx::PxQuat(quat[0], quat[1], quat[2], quat[3]));
+	physx::PxRigidDynamic* convex_actor;
+	assertTRUE(convex_actor = PxGetPhysics().createRigidDynamic(convex_transform));
+	//convex_actor->setRigidDynamicFlag(physx::PxRigidDynamicFlag::eKINEMATIC, true);
+	physx::PxShape* convex_shape;
+	assertTRUE(convex_shape = convex_actor->createShape(physx::PxConvexMeshGeometry(convex_mesh), *material));
+	scene->addActor(*convex_actor);
+	*/
+
+	physx::PxTransform cylinder_transform(physx::PxVec3(-10.0f, 10.0f, 0.0f));
+	physx::PxRigidDynamic* cylinder_actor;
+	assertTRUE(cylinder_actor = PxGetPhysics().createRigidDynamic(cylinder_transform));
+	cylinder_actor->setRigidDynamicFlag(physx::PxRigidDynamicFlag::eKINEMATIC, true);
+	PxCylinderMesh cylinder;
+	assertTRUE(cylinder.create(gCooking, 1.0f, 2.0f));
+	for (physx::PxU32 i = 0; i < cylinder.meshcnt; ++i) {
+		cylinder_actor->createShape(physx::PxTriangleMeshGeometry(cylinder.mesh[i]), *material);
+	}
+	scene->addActor(*cylinder_actor);
+
 	/*
 	// create plane actor
 	physx::PxTransform plane_transform(physx::PxVec3(0.0f, 0.0f, 0.0f), physx::PxQuat(q[0], q[1], q[2], q[3]));

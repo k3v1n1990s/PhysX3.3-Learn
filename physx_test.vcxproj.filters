@@ -40,6 +40,8 @@
     <ClCompile Include="util\c\component\cXML.c" />
     <ClCompile Include="util\c\datastruct\hash.c" />
     <ClCompile Include="scene_xml.cpp" />
+    <ClCompile Include="util\c\datastruct\strings.c" />
+    <ClCompile Include="convexe_mesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="scene_simulate_event_callback.h" />
@@ -83,7 +85,6 @@
     <ClInclude Include="util\cpp\cpp_compiler_define.h" />
     <ClInclude Include="util\cpp\exception.h" />
     <ClInclude Include="util\cpp\nullptr.h" />
-    <ClInclude Include="util\cpp\string_util.h" />
     <ClInclude Include="util\cpp\unordered_map.h" />
     <ClInclude Include="util\cpp\unordered_set.h" />
     <ClInclude Include="util\cpp\unique_ptr.h" />
@@ -93,5 +94,7 @@
     <ClInclude Include="util\c\component\cXML.h" />
     <ClInclude Include="util\c\datastruct\hash.h" />
     <ClInclude Include="scene_xml.h" />
+    <ClInclude Include="util\c\datastruct\strings.h" />
+    <ClInclude Include="convex_mesh.h" />
   </ItemGroup>
 </Project>

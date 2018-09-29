@@ -1,123 +1,99 @@
 #include "util/c/syslib/math.h"
 #include "convex_mesh.h"
+#include <stdio.h>
 #include <stdlib.h>
 
-PxCylinderMesh* PxCylinderMesh::createCylinderMesh(PxCylinderMesh* cylinder, physx::PxCooking* cooking, physx::PxReal radius, physx::PxReal height) {
-	cylinder->meshcnt = cylinder->sidecnt * 4;
-	cylinder->mesh = (physx::PxTriangleMesh**)calloc(1, sizeof(physx::PxTriangleMesh*) * cylinder->meshcnt);
-	if (!cylinder->mesh)
+/*
+void debug(physx::PxVec3* triangle_verts, physx::PxU32 triangle_verts_cnt, physx::PxU32* triangle_indices, physx::PxU32 triangle_indices_cnt) {
+	physx::PxU32 i;
+	puts("verts:");
+	for (i = 0; i < triangle_verts_cnt; ++i) {
+		printf("%f, %f, %f\n", triangle_verts[i].x, triangle_verts[i].y, triangle_verts[i].z);
+	}
+	puts("indices:");
+	for (i = 0; i < triangle_indices_cnt * 3; i += 3) {
+		printf("%d, %d, %d\n", triangle_indices[i], triangle_indices[i+1], triangle_indices[i+2]);
+	}
+}
+*/
+
+physx::PxTriangleMesh* createCylinderMesh(physx::PxCooking* cooking, physx::PxReal radius, physx::PxReal height, physx::PxU32 sidecnt) {
+	physx::PxU32 triangle_verts_cnt = sidecnt * 2 + 2;
+	physx::PxU32 triangle_indices_cnt = sidecnt * 4;
+	physx::PxU32 memsize = sizeof(physx::PxVec3) * triangle_verts_cnt + sizeof(physx::PxU32) * 3 * triangle_indices_cnt;
+	char* membuf = (char*)malloc(memsize);
+	if (!membuf)
 		return NULL;
 
-	physx::PxU32 side_i, mesh_i = 0;
-	physx::PxReal rad, step = physx::PxTwoPi / (physx::PxReal)(cylinder->sidecnt);
-	for (side_i = 0, rad = 0.0f; side_i < cylinder->sidecnt; ++side_i, rad += step) {
-		physx::PxReal x0 = radius * physx::PxCos(rad);
-		physx::PxReal z0 = radius * physx::PxSin(rad);
-		physx::PxReal x1 = radius * physx::PxCos(rad + step);
-		physx::PxReal z1 = radius * physx::PxSin(rad + step);
+	physx::PxVec3* triangle_verts = (physx::PxVec3*)membuf;
+	physx::PxU32* triangle_indices = (physx::PxU32*)(membuf + sizeof(physx::PxVec3) * triangle_verts_cnt);
 
-		physx::PxTriangleMesh* top_triangle_mesh = NULL;
-		do {
-			physx::PxVec3 triangle_verts[] = {
-				physx::PxVec3(0, height, 0),
-				physx::PxVec3(x1, height, z1),
-				physx::PxVec3(x0, height, z0),
-			};
-			physx::PxU32 triangle_indices[] = { 0, 1, 2 };
-			physx::PxTriangleMeshDesc triangle_desc;
-			triangle_desc.points.count = sizeof(triangle_verts) / sizeof(triangle_verts[0]);
-			triangle_desc.points.stride = sizeof(triangle_verts[0]);
-			triangle_desc.points.data = triangle_verts;
-			triangle_desc.triangles.count = sizeof(triangle_indices) / (sizeof(triangle_indices[0]) * 3);
-			triangle_desc.triangles.stride = sizeof(triangle_indices[0]) * 3;
-			triangle_desc.triangles.data = triangle_indices;
-			physx::PxDefaultMemoryOutputStream outbuf;
-			if (!cooking->cookTriangleMesh(triangle_desc, outbuf))
-				break;
-			physx::PxDefaultMemoryInputData inputdata(outbuf.getData(), outbuf.getSize());
-			top_triangle_mesh = PxGetPhysics().createTriangleMesh(inputdata);
-		} while (0);
-		if (!top_triangle_mesh)
-			break;
-		cylinder->mesh[mesh_i++] = top_triangle_mesh;
-
-		physx::PxTriangleMesh* bottom_triangle_mesh = NULL;
-		do {
-			physx::PxVec3 triangle_verts[] = {
-				physx::PxVec3(x0, -height, z0),
-				physx::PxVec3(x1, -height, z1),
-				physx::PxVec3(0, -height, 0)
-			};
-			physx::PxU32 triangle_indices[] = { 0, 1, 2 };
-			physx::PxTriangleMeshDesc triangle_desc;
-			triangle_desc.points.count = sizeof(triangle_verts) / sizeof(triangle_verts[0]);
-			triangle_desc.points.stride = sizeof(triangle_verts[0]);
-			triangle_desc.points.data = triangle_verts;
-			triangle_desc.triangles.count = sizeof(triangle_indices) / (sizeof(triangle_indices[0]) * 3);
-			triangle_desc.triangles.stride = sizeof(triangle_indices[0]) * 3;
-			triangle_desc.triangles.data = triangle_indices;
-			physx::PxDefaultMemoryOutputStream outbuf;
-			if (!cooking->cookTriangleMesh(triangle_desc, outbuf))
-				break;
-			physx::PxDefaultMemoryInputData inputdata(outbuf.getData(), outbuf.getSize());
-			bottom_triangle_mesh = PxGetPhysics().createTriangleMesh(inputdata);
-		} while (0);
-		if (!bottom_triangle_mesh)
-			break;
-		cylinder->mesh[mesh_i++] = bottom_triangle_mesh;
-
-		physx::PxTriangleMesh* side0_triangle_mesh = NULL;
-		do {
-			physx::PxVec3 triangle_verts[] = {
-				physx::PxVec3(x1, -height, z1),
-				physx::PxVec3(x0, -height, z0),
-				physx::PxVec3(x0, height, z0)
-			};
-			physx::PxU32 triangle_indices[] = { 0, 1, 2 };
-			physx::PxTriangleMeshDesc triangle_desc;
-			triangle_desc.points.count = sizeof(triangle_verts) / sizeof(triangle_verts[0]);
-			triangle_desc.points.stride = sizeof(triangle_verts[0]);
-			triangle_desc.points.data = triangle_verts;
-			triangle_desc.triangles.count = sizeof(triangle_indices) / (sizeof(triangle_indices[0]) * 3);
-			triangle_desc.triangles.stride = sizeof(triangle_indices[0]) * 3;
-			triangle_desc.triangles.data = triangle_indices;
-			physx::PxDefaultMemoryOutputStream outbuf;
-			if (!cooking->cookTriangleMesh(triangle_desc, outbuf))
-				break;
-			physx::PxDefaultMemoryInputData inputdata(outbuf.getData(), outbuf.getSize());
-			side0_triangle_mesh = PxGetPhysics().createTriangleMesh(inputdata);
-		} while (0);
-		if (!side0_triangle_mesh)
-			break;
-		cylinder->mesh[mesh_i++] = side0_triangle_mesh;
-
-		physx::PxTriangleMesh* side1_triangle_mesh = NULL;
-		do {
-			physx::PxVec3 triangle_verts[] = {
-				physx::PxVec3(x0, height, z0),
-				physx::PxVec3(x1, height, z1),
-				physx::PxVec3(x1, -height, z1)
-			};
-			physx::PxU32 triangle_indices[] = { 0, 1, 2 };
-			physx::PxTriangleMeshDesc triangle_desc;
-			triangle_desc.points.count = sizeof(triangle_verts) / sizeof(triangle_verts[0]);
-			triangle_desc.points.stride = sizeof(triangle_verts[0]);
-			triangle_desc.points.data = triangle_verts;
-			triangle_desc.triangles.count = sizeof(triangle_indices) / (sizeof(triangle_indices[0]) * 3);
-			triangle_desc.triangles.stride = sizeof(triangle_indices[0]) * 3;
-			triangle_desc.triangles.data = triangle_indices;
-			physx::PxDefaultMemoryOutputStream outbuf;
-			if (!cooking->cookTriangleMesh(triangle_desc, outbuf))
-				break;
-			physx::PxDefaultMemoryInputData inputdata(outbuf.getData(), outbuf.getSize());
-			side1_triangle_mesh = PxGetPhysics().createTriangleMesh(inputdata);
-		} while (0);
-		if (!side1_triangle_mesh)
-			break;
-		cylinder->mesh[mesh_i++] = side1_triangle_mesh;
+	physx::PxReal rad = 0.0f, step = physx::PxTwoPi / (physx::PxReal)(sidecnt);
+	for (physx::PxU32 i = 0; i < sidecnt; ++i, rad += step) {
+		physx::PxReal x = radius * physx::PxCos(rad);
+		physx::PxReal z = radius * physx::PxSin(rad);
+		triangle_verts[i * 2] = physx::PxVec3(x, height, z);
+		triangle_verts[i * 2 + 1] = physx::PxVec3(x, -height, z);
 	}
-	if (side_i != cylinder->sidecnt) {
-		return NULL;
+	triangle_verts[sidecnt * 2] = physx::PxVec3(0.0f, height, 0.0f);
+	triangle_verts[sidecnt * 2 + 1] = physx::PxVec3(0.0f, -height, 0.0f);
+
+	physx::PxU32 ind_i = 0;
+	for (physx::PxU32 i = 0; i < sidecnt; ++i) {
+		physx::PxU32 vert_i = i * 2;
+		if (i + 1 == sidecnt) {
+			triangle_indices[ind_i++] = 0;
+			triangle_indices[ind_i++] = vert_i;
+			triangle_indices[ind_i++] = triangle_verts_cnt - 2;
+
+			triangle_indices[ind_i++] = triangle_verts_cnt - 1;
+			triangle_indices[ind_i++] = vert_i + 1;
+			triangle_indices[ind_i++] = 1;
+
+			triangle_indices[ind_i++] = 1;
+			triangle_indices[ind_i++] = vert_i + 1;
+			triangle_indices[ind_i++] = vert_i;
+
+			triangle_indices[ind_i++] = 0;
+			triangle_indices[ind_i++] = 1;
+			triangle_indices[ind_i++] = vert_i;
+		}
+		else {
+			triangle_indices[ind_i++] = vert_i + 2;
+			triangle_indices[ind_i++] = vert_i;
+			triangle_indices[ind_i++] = triangle_verts_cnt - 2;
+
+			triangle_indices[ind_i++] = triangle_verts_cnt - 1;
+			triangle_indices[ind_i++] = vert_i + 1;
+			triangle_indices[ind_i++] = vert_i + 3;
+
+			triangle_indices[ind_i++] = vert_i + 3;
+			triangle_indices[ind_i++] = vert_i + 1;
+			triangle_indices[ind_i++] = vert_i;
+
+			triangle_indices[ind_i++] = vert_i + 2;
+			triangle_indices[ind_i++] = vert_i + 3;
+			triangle_indices[ind_i++] = vert_i;
+		}
 	}
-	return cylinder;
+
+	physx::PxTriangleMeshDesc triangle_desc;
+	triangle_desc.points.count = triangle_verts_cnt;
+	triangle_desc.points.stride = sizeof(*triangle_verts);
+	triangle_desc.points.data = triangle_verts;
+	triangle_desc.triangles.count = triangle_indices_cnt;
+	triangle_desc.triangles.stride = sizeof(*triangle_indices) * 3;
+	triangle_desc.triangles.data = triangle_indices;
+
+	physx::PxTriangleMesh* mesh;
+	physx::PxDefaultMemoryOutputStream outbuf;
+	if (cooking->cookTriangleMesh(triangle_desc, outbuf)) {
+		physx::PxDefaultMemoryInputData inputdata(outbuf.getData(), outbuf.getSize());
+		mesh = PxGetPhysics().createTriangleMesh(inputdata);
+	}
+	else {
+		mesh = NULL;
+	}
+	free(membuf);
+	return mesh;
 }

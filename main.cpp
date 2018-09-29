@@ -209,11 +209,9 @@ int main(int argc, char** argv) {
 	physx::PxRigidDynamic* cylinder_actor;
 	assertTRUE(cylinder_actor = PxGetPhysics().createRigidDynamic(cylinder_transform));
 	cylinder_actor->setRigidDynamicFlag(physx::PxRigidDynamicFlag::eKINEMATIC, true);
-	PxCylinderMesh cylinder;
-	assertTRUE(cylinder.create(gCooking, 1.0f, 2.0f));
-	for (physx::PxU32 i = 0; i < cylinder.meshcnt; ++i) {
-		cylinder_actor->createShape(physx::PxTriangleMeshGeometry(cylinder.mesh[i]), *material);
-	}
+	physx::PxTriangleMesh* cylinder_mesh;
+	assertTRUE(cylinder_mesh = createCylinderMesh(gCooking, 1.0f, 2.0f, 20));
+	cylinder_actor->createShape(physx::PxTriangleMeshGeometry(cylinder_mesh), *material);
 	scene->addActor(*cylinder_actor);
 
 	/*

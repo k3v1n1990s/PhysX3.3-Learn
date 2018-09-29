@@ -210,7 +210,7 @@ int main(int argc, char** argv) {
 	assertTRUE(cylinder_actor = PxGetPhysics().createRigidDynamic(cylinder_transform));
 	cylinder_actor->setRigidDynamicFlag(physx::PxRigidDynamicFlag::eKINEMATIC, true);
 	physx::PxTriangleMesh* cylinder_mesh;
-	assertTRUE(cylinder_mesh = createCylinderMesh(gCooking, 1.0f, 2.0f, 20));
+	assertTRUE(cylinder_mesh = cookingCylinderMesh(gCooking, 1.0f, 2.0f, 20));
 	cylinder_actor->createShape(physx::PxTriangleMeshGeometry(cylinder_mesh), *material);
 	scene->addActor(*cylinder_actor);
 

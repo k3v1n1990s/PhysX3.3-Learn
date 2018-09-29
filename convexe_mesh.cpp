@@ -17,7 +17,7 @@ void debug(physx::PxVec3* triangle_verts, physx::PxU32 triangle_verts_cnt, physx
 }
 */
 
-physx::PxTriangleMesh* createCylinderMesh(physx::PxCooking* cooking, physx::PxReal radius, physx::PxReal height, physx::PxU32 sidecnt) {
+physx::PxTriangleMesh* cookingCylinderMesh(physx::PxCooking* cooking, physx::PxReal radius, physx::PxReal height, physx::PxU32 sidecnt) {
 	physx::PxU32 triangle_verts_cnt = sidecnt * 2 + 2;
 	physx::PxU32 triangle_indices_cnt = sidecnt * 4;
 	physx::PxU32 memsize = sizeof(physx::PxVec3) * triangle_verts_cnt + sizeof(physx::PxU32) * 3 * triangle_indices_cnt;
